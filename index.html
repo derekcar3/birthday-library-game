@@ -3,50 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Library Quest - Happy 33rd Birthday!</title>
+    <title>🎉 Happy 33rd Birthday - Library Adventure! 📚</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="game-container">
+    <div id="gameContainer">
+        <!-- Game Header -->
         <header class="game-header">
-            <h1>🎉 Library Quest 📚</h1>
-            <h2>Happy 33rd Birthday!</h2>
+            <h1>🎂 Happy 33rd Birthday! 🎂</h1>
+            <h2>📚 The Magical Library Quest 📚</h2>
         </header>
-        
-        <div class="game-info">
-            <div class="timer">
-                <span>⏰ Time: </span>
-                <span id="time-display">3:00</span>
+Copy    <!-- Game Stats -->
+    <div class="stats-panel">
+        <div class="stat">
+            <span class="stat-label">Books Collected:</span>
+            <span id="booksCollected">0</span>/15
+        </div>
+        <div class="stat">
+            <span class="stat-label">Energy:</span>
+            <div class="energy-bar">
+                <div id="energyFill"></div>
             </div>
-            <div class="score">
-                <span>📖 Found: </span>
-                <span id="score-display">0/12</span>
-            </div>
         </div>
-
-        <div class="game-board">
-            <div id="word-grid" class="word-grid"></div>
-        </div>
-
-        <div class="word-list">
-            <h3>Find these words:</h3>
-            <div id="words-to-find" class="words-container"></div>
-        </div>
-
-        <div class="game-controls">
-            <button id="new-game-btn" class="btn">New Game</button>
-            <button id="hint-btn" class="btn">Hint (3 left)</button>
-        </div>
-
-        <div id="game-modal" class="modal hidden">
-            <div class="modal-content">
-                <h2 id="modal-title"></h2>
-                <p id="modal-message"></p>
-                <button id="modal-btn" class="btn">Play Again</button>
-            </div>
+        <div class="stat">
+            <span class="stat-label">Level:</span>
+            <span id="currentLevel">1</span>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Game Area -->
+    <div id="gameArea" class="game-area">
+        <div id="player" class="player">👩‍🏫</div>
+        <div id="library-sections">
+            <!-- Books will be dynamically generated -->
+        </div>
+    </div>
+
+    <!-- Control Buttons -->
+    <div class="controls">
+        <button id="moveUp" class="control-btn">⬆️</button>
+        <div class="horizontal-controls">
+            <button id="moveLeft" class="control-btn">⬅️</button>
+            <button id="collectBtn" class="control-btn collect">📚 Collect</button>
+            <button id="moveRight" class="control-btn">➡️</button>
+        </div>
+        <button id="moveDown" class="control-btn">⬇️</button>
+    </div>
+
+    <!-- Challenge Modal -->
+    <div id="challengeModal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="challengeTitle">Special Challenge!</h3>
+            <p id="challengeText"></p>
+            <div id="challengeOptions"></div>
+        </div>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="victoryModal" class="modal hidden">
+        <div class="modal-content victory">
+            <h2>🎉 Congratulations! 🎉</h2>
+            <p>You've completed the magical library quest!</p>
+            <p class="birthday-message">Happy 33rd Birthday! Here's to another year of adventures, good books, healthy living, and precious moments with Cassian and Charlie! 💕</p>
+            <button id="playAgain" class="play-again-btn">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions">
+        <p>🎯 Collect all 15 special books from different library sections!</p>
+        <p>📖 Each section represents something you love</p>
+        <p>⚡ Watch your energy and complete challenges for bonus points!</p>
+    </div>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
