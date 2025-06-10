@@ -1,392 +1,342 @@
-class LibraryQuest {
+
+class LibraryAdventureGame {
     constructor() {
-        this.gridSize = 10;
-        this.timeLimit = 180; // 3 minutes
-        this.timeRemaining = this.timeLimit;
-        this.score = 0;
-        this.hintsLeft = 3;
-        this.gameActive = false;
-        this.selectedCells = [];
-        this.foundWords = new Set();
+        this.player = {
+            x: 50,
+            y: 50,
+            energy: 100
+        };
         
-        // Personalized words for the birthday girl
-        this.wordsToFind = [
-            'BOOKS', 'NOVEL', 'READ', 'STORY',
-            'RUNNING', 'HEALTH', 'FITNESS',
-            'CASSIAN', 'CHARLIE',
-            'BIRTHDAY', 'LIBRARY', 'THIRTY'
+        this.gameState = {
+            booksCollected: 0,
+            totalBooks: 15,
+            level: 1,
+            gameActive: true
+        };
+        
+        this.bookTypes = [
+            { type: 'fiction', emoji: '📖', name: 'Classic Novel', points: 10 },
+            { type: 'health', emoji: '🥗', name: 'Wellness Guide', points: 15 },
+            { type: 'running', emoji: '🏃‍♀️', name: 'Running Manual', points: 15 },
+            { type: 'kids', emoji: '👶', name: 'Cassian & Charlie\'s Book', points: 20 }
         ];
         
-        this.grid = [];
-        this.wordPositions = new Map();
+        this.challenges = [
+            {
+                title: "Health & Wellness Challenge!",
+                question: "What's a great way to start a healthy day?",
+                options: ["Morning run", "Meditation", "Healthy breakfast", "All of the above"],
+                correct: 3,
+                reward: 25
+            },
+            {
+                title: "Running Achievement!",
+                question: "What's the best part about running?",
+                options: ["Fresh air", "Me time", "Endorphins", "All of these!"],
+                correct: 3,
+                reward: 25
+            },
+            {
+                title: "Parenting Wisdom!",
+                question: "What makes Cassian and Charlie special?",
+                options: ["Their curiosity", "Their laughter", "Their hugs", "Everything!"],
+                correct: 3,
+                reward: 30
+            },
+            {
+                title: "Book Lover's Quiz!",
+                question: "What's the best reading spot?",
+                options: ["Cozy corner", "Under a tree", "Comfortable bed", "Anywhere quiet"],
+                correct: 3,
+                reward: 20
+            }
+        ];
         
-        this.initializeElements();
-        this.setupEventListeners();
-        this.startNewGame();
+        this.books = [];
+        this.init();
     }
     
-    initializeElements() {
-        this.gridElement = document.getElementById('word-grid');
-        this.scoreDisplay = document.getElementById('score-display');
-        this.timeDisplay = document.getElementById('time-display');
-        this.wordsContainer = document.getElementById('words-to-find');
-        this.modal = document.getElementById('game-modal');
-        this.modalTitle = document.getElementById('modal-title');
-        this.modalMessage = document.getElementById('modal-message');
-        this.newGameBtn = document.getElementById('new-game-btn');
-        this.hintBtn = document.getElementById('hint-btn');
-        this.modalBtn = document.getElementById('modal-btn');
+    init() {
+        this.setupEventListeners();
+        this.generateBooks();
+        this.updateDisplay();
+        this.startGameLoop();
     }
     
     setupEventListeners() {
-        this.newGameBtn.addEventListener('click', () => this.startNewGame());
-        this.hintBtn.addEventListener('click', () => this.giveHint());
-        this.modalBtn.addEventListener('click', () => this.closeModal());
+        // Touch controls for mobile
+        document.getElementById('moveUp').addEventListener('click', () => this.movePlayer(0, -30));
+        document.getElementById('moveDown').addEventListener('click', () => this.movePlayer(0, 30));
+        document.getElementById('moveLeft').addEventListener('click', () => this.movePlayer(-30, 0));
+        document.getElementById('moveRight').addEventListener('click', () => this.movePlayer(30, 0));
+        document.getElementById('collectBtn').addEventListener('click', () => this.collectNearbyBook());
+        document.getElementById('playAgain').addEventListener('click', () => this.resetGame());
         
-        // Touch/mouse events for word selection
-        this.gridElement.addEventListener('mousedown', (e) => this.startSelection(e));
-        this.gridElement.addEventListener('mouseover', (e) => this.continueSelection(e));
-        this.gridElement.addEventListener('mouseup', () => this.endSelection());
-        
-        // Touch events for mobile
-        this.gridElement.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.startSelection(e.touches[0]);
-        });
-        this.gridElement.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const element = document.elementFromPoint(touch.clientX, touch.clientY);
-            this.continueSelection({target: element});
-        });
-        this.gridElement.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            this.endSelection();
+        // Keyboard controls for desktop
+        document.addEventListener('keydown', (e) => {
+            if (!this.gameState.gameActive) return;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                case 'w':
+                    this.movePlayer(0, -30);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                    this.movePlayer(0, 30);
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                    this.movePlayer(-30, 0);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                    this.movePlayer(30, 0);
+                    break;
+                case ' ':
+                case 'Enter':
+                    e.preventDefault();
+                    this.collectNearbyBook();
+                    break;
+            }
         });
     }
     
-    startNewGame() {
-        this.timeRemaining = this.timeLimit;
-        this.score = 0;
-        this.hintsLeft = 3;
-        this.foundWords.clear();
-        this.gameActive = true;
-        this.selectedCells = [];
+    generateBooks() {
+        const gameArea = document.getElementById('gameArea');
+        const areaRect = gameArea.getBoundingClientRect();
         
-        this.generateGrid();
-        this.placeWords();
-        this.fillEmptySpaces();
-        this.renderGrid();
-        this.renderWordList();
+        // Clear existing books
+        this.books = [];
+        document.querySelectorAll('.book').forEach(book => book.remove());
+        
+        // Generate books based on level
+        const booksToGenerate = Math.min(5 + this.gameState.level, 8);
+        
+        for (let i = 0; i < booksToGenerate; i++) {
+            const bookType = this.bookTypes[Math.floor(Math.random() * this.bookTypes.length)];
+            const book = {
+                id: Date.now() + i,
+                ...bookType,
+                x: Math.random() * 80 + 10, // Percentage position
+                y: Math.random() * 80 + 10,
+                collected: false
+            };
+            
+            this.books.push(book);
+            this.createBookElement(book);
+        }
+    }
+    
+    createBookElement(book) {
+        const bookElement = document.createElement('div');
+        bookElement.className = `book ${book.type}`;
+        bookElement.id = `book-${book.id}`;
+        bookElement.innerHTML = book.emoji;
+        bookElement.style.left = book.x + '%';
+        bookElement.style.top = book.y + '%';
+        bookElement.title = book.name;
+        
+        document.getElementById('gameArea').appendChild(bookElement);
+    }
+    
+    movePlayer(deltaX, deltaY) {
+        if (!this.gameState.gameActive) return;
+        
+        const gameArea = document.getElementById('gameArea');
+        const player = document.getElementById('player');
+        const areaRect = gameArea.getBoundingClientRect();
+        
+        // Convert percentage to pixels for calculation
+        const currentX = (this.player.x / 100) * areaRect.width;
+        const currentY = (this.player.y / 100) * areaRect.height;
+        
+        const newX = Math.max(5, Math.min(95, this.player.x + (deltaX / areaRect.width) * 100));
+        const newY = Math.max(5, Math.min(95, this.player.y + (deltaY / areaRect.height) * 100));
+        
+        this.player.x = newX;
+        this.player.y = newY;
+        
+        // Update player position
+        player.style.left = this.player.x + '%';
+        player.style.top = this.player.y + '%';
+        
+        // Consume energy
+        this.player.energy = Math.max(0, this.player.energy - 1);
         this.updateDisplay();
-        this.startTimer();
-        this.closeModal();
-    }
-    
-    generateGrid() {
-        this.grid = Array(this.gridSize).fill().map(() => 
-            Array(this.gridSize).fill('')
-        );
-        this.wordPositions.clear();
-    }
-    
-    placeWords() {
-        const shuffledWords = [...this.wordsToFind].sort(() => Math.random() - 0.5);
         
-        for (const word of shuffledWords) {
-            let placed = false;
-            let attempts = 0;
+        // Auto-collect nearby books
+        this.collectNearbyBook();
+    }
+    
+    collectNearbyBook() {
+        const nearbyBook = this.findNearbyBook();
+        if (nearbyBook && !nearbyBook.collected) {
+            this.collectBook(nearbyBook);
+        }
+    }
+    
+    findNearbyBook() {
+        const threshold = 15; // Distance threshold for collection
+        
+        return this.books.find(book => {
+            if (book.collected) return false;
             
-            while (!placed && attempts < 100) {
-                const direction = Math.floor(Math.random() * 8); // 8 directions
-                const position = this.getRandomPosition(word.length, direction);
-                
-                if (position && this.canPlaceWord(word, position, direction)) {
-                    this.placeWord(word, position, direction);
-                    placed = true;
-                }
-                attempts++;
-            }
-        }
-    }
-    
-    getRandomPosition(wordLength, direction) {
-        const directions = [
-            [0, 1],   // horizontal right
-            [1, 0],   // vertical down
-            [1, 1],   // diagonal down-right
-            [1, -1],  // diagonal down-left
-            [0, -1],  // horizontal left
-            [-1, 0],  // vertical up
-            [-1, -1], // diagonal up-left
-            [-1, 1]   // diagonal up-right
-        ];
-        
-        const [dx, dy] = directions[direction];
-        const maxRow = dx > 0 ? this.gridSize - wordLength : dx < 0 ? wordLength - 1 : this.gridSize - 1;
-        const maxCol = dy > 0 ? this.gridSize - wordLength : dy < 0 ? wordLength - 1 : this.gridSize - 1;
-        const minRow = dx < 0 ? wordLength - 1 : 0;
-        const minCol = dy < 0 ? wordLength - 1 : 0;
-        
-        if (maxRow < minRow || maxCol < minCol) return null;
-        
-        return {
-            row: Math.floor(Math.random() * (maxRow - minRow + 1)) + minRow,
-            col: Math.floor(Math.random() * (maxCol - minCol + 1)) + minCol
-        };
-    }
-    
-    canPlaceWord(word, position, direction) {
-        const directions = [
-            [0, 1], [1, 0], [1, 1], [1, -1],
-            [0, -1], [-1, 0], [-1, -1], [-1, 1]
-        ];
-        const [dx, dy] = directions[direction];
-        
-        for (let i = 0; i < word.length; i++) {
-            const row = position.row + dx * i;
-            const col = position.col + dy * i;
+            const distance = Math.sqrt(
+                Math.pow(this.player.x - book.x, 2) + 
+                Math.pow(this.player.y - book.y, 2)
+            );
             
-            if (row < 0 || row >= this.gridSize || col < 0 || col >= this.gridSize) {
-                return false;
-            }
-            
-            if (this.grid[row][col] !== '' && this.grid[row][col] !== word[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-    
-    placeWord(word, position, direction) {
-        const directions = [
-            [0, 1], [1, 0], [1, 1], [1, -1],
-            [0, -1], [-1, 0], [-1, -1], [-1, 1]
-        ];
-        const [dx, dy] = directions[direction];
-        const positions = [];
-        
-        for (let i = 0; i < word.length; i++) {
-            const row = position.row + dx * i;
-            const col = position.col + dy * i;
-            this.grid[row][col] = word[i];
-            positions.push({row, col});
-        }
-        
-        this.wordPositions.set(word, positions);
-    }
-    
-    fillEmptySpaces() {
-        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        for (let row = 0; row < this.gridSize; row++) {
-            for (let col = 0; col < this.gridSize; col++) {
-                if (this.grid[row][col] === '') {
-                    this.grid[row][col] = letters[Math.floor(Math.random() * letters.length)];
-                }
-            }
-        }
-    }
-    
-    renderGrid() {
-        this.gridElement.innerHTML = '';
-        for (let row = 0; row < this.gridSize; row++) {
-            for (let col = 0; col < this.gridSize; col++) {
-                const cell = document.createElement('div');
-                cell.className = 'grid-cell';
-                cell.textContent = this.grid[row][col];
-                cell.dataset.row = row;
-                cell.dataset.col = col;
-                this.gridElement.appendChild(cell);
-            }
-        }
-    }
-    
-    renderWordList() {
-        this.wordsContainer.innerHTML = '';
-        this.wordsToFind.forEach(word => {
-            const wordElement = document.createElement('div');
-            wordElement.className = 'word-item';
-            wordElement.textContent = word;
-            wordElement.dataset.word = word;
-            this.wordsContainer.appendChild(wordElement);
+            return distance < threshold;
         });
     }
     
-    startSelection(event) {
-        if (!this.gameActive) return;
+    collectBook(book) {
+        book.collected = true;
+        this.gameState.booksCollected++;
         
-        const cell = event.target.closest('.grid-cell');
-        if (!cell) return;
-        
-        this.selectedCells = [cell];
-        cell.classList.add('selected');
-        this.isSelecting = true;
-    }
-    
-    continueSelection(event) {
-        if (!this.gameActive || !this.isSelecting) return;
-        
-        const cell = event.target.closest('.grid-cell');
-        if (!cell || this.selectedCells.includes(cell)) return;
-        
-        // Check if the new cell is in line with the selection
-        if (this.selectedCells.length > 1) {
-            if (!this.isInLine(this.selectedCells[0], this.selectedCells[1], cell)) return;
+        // Remove book element
+        const bookElement = document.getElementById(`book-${book.id}`);
+        if (bookElement) {
+            bookElement.style.transform = 'scale(1.5)';
+            bookElement.style.opacity = '0';
+            setTimeout(() => bookElement.remove(), 300);
         }
         
-        this.selectedCells.push(cell);
-        cell.classList.add('selected');
-    }
-    
-    endSelection() {
-        if (!this.gameActive || !this.isSelecting) return;
+        // Restore energy
+        this.player.energy = Math.min(100, this.player.energy + 10);
         
-        this.isSelecting = false;
-        const selectedWord = this.getSelectedWord();
-        
-        if (this.wordsToFind.includes(selectedWord) && !this.foundWords.has(selectedWord)) {
-            this.foundWord(selectedWord);
-        }
-        
-        this.clearSelection();
-    }
-    
-    isInLine(cell1, cell2, cell3) {
-        const row1 = parseInt(cell1.dataset.row);
-        const col1 = parseInt(cell1.dataset.col);
-        const row2 = parseInt(cell2.dataset.row);
-        const col2 = parseInt(cell2.dataset.col);
-        const row3 = parseInt(cell3.dataset.row);
-        const col3 = parseInt(cell3.dataset.col);
-        
-        const dx1 = row2 - row1;
-        const dy1 = col2 - col1;
-        const dx2 = row3 - row2;
-        const dy2 = col3 - col2;
-        
-        return dx1 === dx2 && dy1 === dy2;
-    }
-    
-    getSelectedWord() {
-        return this.selectedCells.map(cell => cell.textContent).join('');
-    }
-    
-    foundWord(word) {
-        this.foundWords.add(word);
-        this.score++;
-        
-        // Mark cells as found
-        this.selectedCells.forEach(cell => {
-            cell.classList.add('found');
-        });
-        
-        // Mark word in list as found
-        const wordElement = document.querySelector(`[data-word="${word}"]`);
-        if (wordElement) {
-            wordElement.classList.add('found');
+        // Show challenge for special books
+        if (book.points >= 20 || Math.random() < 0.3) {
+            this.showChallenge();
         }
         
         this.updateDisplay();
+        this.checkWinCondition();
         
-        // Check for win condition
-        if (this.foundWords.size === this.wordsToFind.length) {
-            this.gameWon();
+        // Generate new books if needed
+        if (this.books.filter(b => !b.collected).length < 2) {
+            this.gameState.level++;
+            this.generateBooks();
         }
     }
     
-    clearSelection() {
-        this.selectedCells.forEach(cell => {
-            if (!cell.classList.contains('found')) {
-                cell.classList.remove('selected');
-            }
+    showChallenge() {
+        const challenge = this.challenges[Math.floor(Math.random() * this.challenges.length)];
+        const modal = document.getElementById('challengeModal');
+        
+        document.getElementById('challengeTitle').textContent = challenge.title;
+        document.getElementById('challengeText').textContent = challenge.question;
+        
+        const optionsContainer = document.getElementById('challengeOptions');
+        optionsContainer.innerHTML = '';
+        
+        challenge.options.forEach((option, index) => {
+            const button = document.createElement('button');
+            button.className = 'challenge-option';
+            button.textContent = option;
+            button.addEventListener('click', () => {
+                this.handleChallengeAnswer(index, challenge);
+            });
+            optionsContainer.appendChild(button);
         });
-        this.selectedCells = [];
+        
+        modal.classList.remove('hidden');
     }
     
-    startTimer() {
-        this.timer = setInterval(() => {
-            this.timeRemaining--;
-            this.updateDisplay();
-            
-            if (this.timeRemaining <= 0) {
-                this.gameOver();
-            }
-        }, 1000);
+    handleChallengeAnswer(selectedIndex, challenge) {
+        const modal = document.getElementById('challengeModal');
+        modal.classList.add('hidden');
+        
+        if (selectedIndex === challenge.correct) {
+            this.player.energy = Math.min(100, this.player.energy + challenge.reward);
+            this.showMessage("Correct! ✨ Energy restored!");
+        } else {
+            this.showMessage("Good try! Keep going! 💪");
+        }
+    }
+    
+    showMessage(text) {
+        // Create temporary message
+        const message = document.createElement('div');
+        message.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95);
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 999;
+            font-weight: bold;
+            color: #8B4513;
+        `;
+        message.textContent = text;
+        document.body.appendChild(message);
+        
+        setTimeout(() => message.remove(), 2000);
     }
     
     updateDisplay() {
-        const minutes = Math.floor(this.timeRemaining / 60);
-        const seconds = this.timeRemaining % 60;
-        this.timeDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        this.scoreDisplay.textContent = `${this.score}/${this.wordsToFind.length}`;
-        this.hintBtn.textContent = `Hint (${this.hintsLeft} left)`;
+        document.getElementById('booksCollected').textContent = this.gameState.booksCollected;
+        document.getElementById('currentLevel').textContent = this.gameState.level;
+        document.getElementById('energyFill').style.width = this.player.energy + '%';
     }
     
-    giveHint() {
-        if (!this.gameActive || this.hintsLeft <= 0) return;
-        
-        const unFoundWords = this.wordsToFind.filter(word => !this.foundWords.has(word));
-        if (unFoundWords.length === 0) return;
-        
-        const randomWord = unFoundWords[Math.floor(Math.random() * unFoundWords.length)];
-        const positions = this.wordPositions.get(randomWord);
-        
-        if (positions) {
-            // Highlight the first letter of the word for 2 seconds
-            const firstCell = document.querySelector(`[data-row="${positions[0].row}"][data-col="${positions[0].col}"]`);
-            if (firstCell) {
-                firstCell.style.background = '#FF69B4';
-                firstCell.style.animation = 'pulse 0.5s infinite';
-                
-                setTimeout(() => {
-                    firstCell.style.background = '';
-                    firstCell.style.animation = '';
-                }, 2000);
-            }
+    checkWinCondition() {
+        if (this.gameState.booksCollected >= this.gameState.totalBooks) {
+            this.gameState.gameActive = false;
+            setTimeout(() => {
+                document.getElementById('victoryModal').classList.remove('hidden');
+            }, 500);
         }
+    }
+    
+    resetGame() {
+        this.gameState = {
+            booksCollected: 0,
+            totalBooks: 15,
+            level: 1,
+            gameActive: true
+        };
         
-        this.hintsLeft--;
+        this.player = {
+            x: 50,
+            y: 50,
+            energy: 100
+        };
+        
+        // Reset player position
+        const player = document.getElementById('player');
+        player.style.left = '50%';
+        player.style.top = '50%';
+        
+        // Clear books
+        document.querySelectorAll('.book').forEach(book => book.remove());
+        
+        // Hide modals
+        document.querySelectorAll('.modal').forEach(modal => modal.classList.add('hidden'));
+        
+        // Restart game
+        this.generateBooks();
         this.updateDisplay();
     }
     
-    gameWon() {
-        this.gameActive = false;
-        clearInterval(this.timer);
-        
-        this.modalTitle.textContent = '🎉 Happy Birthday! 🎉';
-        this.modalMessage.innerHTML = `
-            Congratulations! You found all the words!<br>
-            You're as amazing as the books you love to read,<br>
-            as energetic as your morning runs,<br>
-            and as wonderful as Cassian and Charlie think you are!<br><br>
-            <strong>Have the most fantastic 33rd birthday! 📚🏃‍♀️💖</strong>
-        `;
-        this.showModal();
-    }
-    
-    gameOver() {
-        this.gameActive = false;
-        clearInterval(this.timer);
-        
-        this.modalTitle.textContent = '⏰ Time\'s Up!';
-        this.modalMessage.innerHTML = `
-            You found ${this.score} out of ${this.wordsToFind.length} words!<br>
-            But hey, it's your birthday - you're still amazing!<br><br>
-            <strong>Happy 33rd Birthday! 🎂</strong>
-        `;
-        this.showModal();
-    }
-    
-    showModal() {
-        this.modal.classList.remove('hidden');
-    }
-    
-    closeModal() {
-        this.modal.classList.add('hidden');
+    startGameLoop() {
+        setInterval(() => {
+            if (this.gameState.gameActive && this.player.energy > 0) {
+                // Gradually restore energy
+                if (this.player.energy < 100 && Math.random() < 0.1) {
+                    this.player.energy = Math.min(100, this.player.energy + 1);
+                    this.updateDisplay();
+                }
+            }
+        }, 1000);
     }
 }
 
-// Initialize the game when the page loads
+// Initialize game when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new LibraryQuest();
+    new LibraryAdventureGame();
 });
