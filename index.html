@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>🎉 Happy 33rd Birthday - Library Adventure! 📚</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -17,7 +17,7 @@ Copy    <!-- Game Stats -->
     <div class="stats-panel">
         <div class="stat">
             <span class="stat-label">Books Collected:</span>
-            <span id="booksCollected">0</span>/15
+            <span id="booksCollected">0</span>/20
         </div>
         <div class="stat">
             <span class="stat-label">Energy:</span>
@@ -28,6 +28,26 @@ Copy    <!-- Game Stats -->
         <div class="stat">
             <span class="stat-label">Level:</span>
             <span id="currentLevel">1</span>
+        </div>
+    </div>
+
+    <!-- Collection Progress -->
+    <div class="collection-progress">
+        <div class="collection-item">
+            <span>📖</span>
+            <span id="fictionCount">0</span>/5
+        </div>
+        <div class="collection-item">
+            <span>🥗</span>
+            <span id="healthCount">0</span>/5
+        </div>
+        <div class="collection-item">
+            <span>🏃‍♀️</span>
+            <span id="runningCount">0</span>/5
+        </div>
+        <div class="collection-item">
+            <span>👶</span>
+            <span id="kidsCount">0</span>/5
         </div>
     </div>
 
@@ -71,9 +91,9 @@ Copy    <!-- Game Stats -->
 
     <!-- Instructions -->
     <div class="instructions">
-        <p>🎯 Collect all 15 special books from different library sections!</p>
+        <p>🎯 Collect 5 books of each type to unlock special challenges!</p>
         <p>📖 Each section represents something you love</p>
-        <p>⚡ Watch your energy and complete challenges for bonus points!</p>
+        <p>⚡ Complete all challenges to win the game!</p>
     </div>
 </div>
 
